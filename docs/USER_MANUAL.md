@@ -137,12 +137,20 @@ Which ones print on Serial is set by `OUTBOUND_TOPICS` in `config.h`.
 ## 8. Connecting to ZeroMQ (micro-ZMQ)
 The ESP32 cannot run ZeroMQ, so it connects to an **agent** on a PC. The agent republishes everything on ZeroMQ.
 
-On the PC (Python 3.9+):
+On the PC, build the C++ tools (Ubuntu 22.04):
 ```
-pip install -r agent/requirements.txt
-python agent/broker.py                 # ZeroMQ XSUB/XPUB broker (ports 5555/5556)
-python agent/agent.py --token change-me   # listens for the ESP32 on port 7400
+sudo apt install -y build-essential cmake pkg-config libzmq3-dev
+cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release
+cmake --build cpp/build -j"$(nproc)"
 ```
+Then run each in its own terminal:
+```
+./cpp/build/microzmq_broker                    # ZeroMQ XSUB/XPUB broker (ports 5555/5556)
+./cpp/build/microzmq_agent --token change-me   # listens for the ESP32 on port 7400
+```
+(Python versions of the same tools are in `agent/`: `python3 agent/broker.py` and
+`python3 agent/agent.py --token change-me`. They behave the same; use either one.)
+
 If your AUV middleware already has a broker, skip `broker.py` and run the agent with
 `--xsub tcp://HOST:PORT --xpub tcp://HOST:PORT`.
 
@@ -152,9 +160,9 @@ and `ZMQ_TOKEN` (same as `--token`). Flash it. The Serial Monitor should show
 
 Test from the PC:
 ```
-python agent/ztool.py sub robot/out/                  # watch what the robot sends
-python agent/ztool.py pub robot/in/emotion happy      # change the robot's face
-python agent/ztool.py pub robot/in/servo/cmd 0,45,60  # move the head
+./cpp/build/microzmq_tool sub robot/out/                  # watch what the robot sends
+./cpp/build/microzmq_tool pub robot/in/emotion happy      # change the robot's face
+./cpp/build/microzmq_tool pub robot/in/servo/cmd 0,45,60  # move the head
 ```
 Topic rule: the robot publishes `robot/out/<topic>` and listens on `robot/in/<topic>`.
 Message bodies are plain bytes, so JSON or protobuf also work. See `docs/PROTOCOL.md`.
@@ -177,7 +185,8 @@ For internet access, put the agent port behind TLS or a VPN.
 | Servos jitter or ESP32 resets | servos on their own buck supply, 1000 uF capacitor, common ground, thicker wires |
 | Blank TFT | wiring, LED pin to 3.3 V, correct pins in `config.h` |
 | Distance module FAILED | SDA/SCL pins, 3.3 V, I2C address |
-| `[zmq]` never says agent connected | same WiFi network, PC firewall allows port 7400, token matches, correct PC IP |
+| `[zmq]` never says agent connected | same WiFi network, PC firewall allows port 7400 (`sudo ufw allow 7400/tcp`), token matches, correct PC IP |
+| Agent log says `rejected ... bad token` | `ZMQ_TOKEN` in `config.h` must equal the agent `--token` |
 | Compile error about I2S | use esp32 core 2.0.17, not 3.x |
 | Brief stutter every few seconds | agent is offline; the ESP32 retries every 3 s (up to 0.5 s block) |
 

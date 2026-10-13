@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.16)
+project(microzmq_tools CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ZMQ REQUIRED libzmq)
+find_package(Threads REQUIRED)
+
+foreach(tool broker agent tool)
+  add_executable(microzmq_${tool} ${tool}.cpp)
+  target_include_directories(microzmq_${tool} PRIVATE ${ZMQ_INCLUDE_DIRS})
+  target_link_directories(microzmq_${tool} PRIVATE ${ZMQ_LIBRARY_DIRS})
+  target_link_libraries(microzmq_${tool} PRIVATE ${ZMQ_LIBRARIES} Threads::Threads)
+  target_compile_options(microzmq_${tool} PRIVATE -Wall -Wextra)
+endforeach()

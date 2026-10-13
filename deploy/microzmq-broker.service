@@ -1,0 +1,16 @@
+[Unit]
+Description=micro-ZMQ ZeroMQ broker (XSUB/XPUB)
+After=network.target
+
+[Service]
+User=microzmq
+ExecStart=/usr/local/bin/microzmq_broker --bind 127.0.0.1
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

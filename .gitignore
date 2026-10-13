@@ -2,5 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 build/
+cpp/build/
 .pio/
 *.log
+.vscode/
