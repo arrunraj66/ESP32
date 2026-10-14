@@ -11,9 +11,11 @@ import zmq
 # topic -> regex the payload must match (keeps the web page from sending arbitrary data)
 ALLOWED = {
     "servo/cmd": re.compile(r"^[0-9],-?[0-9]{1,3}(\.[0-9]+)?(,[0-9]{1,3})?$"),
+    "drive/stop": re.compile(r"^$"),
     "servo/center": re.compile(r"^$"),
     "emotion": re.compile(r"^(neutral|happy|sad|angry)$"),
     "face/look": re.compile(r"^-?[01](\.[0-9]+)?,-?[01](\.[0-9]+)?$"),
+    "drive/cmd": re.compile(r"^-?[01](\.[0-9]{1,2})?,-?[01](\.[0-9]{1,2})?$"),   # x (turn), y (forward)
     "audio/beep": re.compile(r"^[0-9]{2,4},[0-9]{1,4}$"),
 }
 
@@ -24,11 +26,15 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
 body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:16px;max-width:480px;margin:auto}
 h1{font-size:20px} .s{margin:18px 0} .s label{display:flex;justify-content:space-between}
 input[type=range]{width:100%;height:36px} button{font-size:16px;padding:12px 16px;margin:4px;border-radius:8px;border:0;background:#2b6cb0;color:#fff}
+#joy{display:block;margin:12px auto;touch-action:none;background:#1a202c;border-radius:50%}
 #st{font-size:13px;color:#9ae6b4;min-height:18px}
 </style></head><body>
 <h1>Robot Remote</h1><div id="st"></div>
+<canvas id="joy" width="260" height="260"></canvas>
+<div id="drv" style="text-align:center;font-size:13px;color:#a0aec0">drive: 0.00, 0.00</div>
 <div id="sliders"></div>
-<button onclick="send('servo/center','')">Center all</button>
+<button onclick="send('drive/stop','')" style="background:#c53030">STOP</button>
+<button onclick="send('servo/center','')">Center scanner</button>
 <button onclick="send('audio/beep','880,150')">Beep</button>
 <div>
 <button onclick="send('emotion','happy')">Happy</button>
@@ -38,7 +44,7 @@ input[type=range]{width:100%;height:36px} button{font-size:16px;padding:12px 16p
 </div>
 <button onclick="localStorage.removeItem('pw');location.reload()" style="background:#444">Change password</button>
 <script>
-const SERVOS=[["Head pan",0,20,160],["Head tilt",1,60,120],["Left arm",2,10,170],["Right arm",3,10,170]];
+const SERVOS=[["Camera / laser scanner",0,0,180]];
 let pw=localStorage.getItem('pw')||prompt('Password'); if(pw)localStorage.setItem('pw',pw);
 const st=document.getElementById('st');
 async function send(topic,payload){
@@ -47,6 +53,34 @@ async function send(topic,payload){
     st.textContent=r.ok?'sent: '+topic+' '+payload:(r.status==401?'wrong password':'error '+r.status);
   }catch(e){st.textContent='no connection';}
 }
+// ---- round joystick: x = turn (right +), y = forward (up +). Sends 10x/s while held, 0,0 on release.
+const cv=document.getElementById('joy'), cx=cv.getContext('2d'), R=130, KNOB=38;
+let jx=0, jy=0, held=false, timer=null;
+function draw(){
+  cx.clearRect(0,0,260,260);
+  cx.strokeStyle='#4a5568'; cx.lineWidth=2;
+  cx.beginPath(); cx.arc(R,R,R-3,0,7); cx.stroke();
+  cx.beginPath(); cx.moveTo(R,10); cx.lineTo(R,250); cx.moveTo(10,R); cx.lineTo(250,R); cx.stroke();
+  const px=R+jx*(R-KNOB), py=R-jy*(R-KNOB);
+  cx.fillStyle=held?'#63b3ed':'#2b6cb0'; cx.beginPath(); cx.arc(px,py,KNOB,0,7); cx.fill();
+}
+function sendDrive(){
+  document.getElementById('drv').textContent='drive: '+jx.toFixed(2)+', '+jy.toFixed(2);
+  send('drive/cmd', jx.toFixed(2)+','+jy.toFixed(2));
+}
+function move(e){
+  const r=cv.getBoundingClientRect();
+  let x=((e.clientX-r.left)/r.width*260-R)/(R-KNOB), y=-((e.clientY-r.top)/r.height*260-R)/(R-KNOB);
+  const m=Math.hypot(x,y); if(m>1){x/=m;y/=m;}
+  jx=Math.round(x*100)/100; jy=Math.round(y*100)/100; draw();
+}
+cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId); held=true; move(e); sendDrive();
+  timer=setInterval(sendDrive,100);};
+cv.onpointermove=e=>{if(held)move(e);};
+function release(){ if(!held)return; held=false; clearInterval(timer); jx=jy=0; draw(); sendDrive(); setTimeout(sendDrive,150); }
+cv.onpointerup=release; cv.onpointercancel=release;
+draw();
+
 const box=document.getElementById('sliders');
 SERVOS.forEach(([name,id,lo,hi])=>{
   const d=document.createElement('div');d.className='s';

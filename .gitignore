@@ -6,3 +6,4 @@ cpp/build/
 .pio/
 *.log
 .vscode/
+firmware/robot_firmware/secrets.h

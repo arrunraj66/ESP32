@@ -13,6 +13,7 @@
 
 #include "comms_module.h"
 #include "servo_module.h"
+#include "drive_module.h"
 #include "display_module.h"
 #include "audio_module.h"
 #include "distance_module.h"
@@ -45,6 +46,9 @@ void setup() {
 #endif
 #if USE_SERVOS
   addModule(new ServoModule());
+#endif
+#if USE_DRIVE
+  addModule(new DriveModule());
 #endif
 #if USE_DISPLAY
   addModule(new DisplayModule());

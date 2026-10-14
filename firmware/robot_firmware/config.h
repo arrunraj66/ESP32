@@ -6,7 +6,8 @@
 //  Turn a module off here and its code and library are not compiled.
 // =====================================================
 #define USE_COMMS     1   // serial command/status link (later: WiFi / ZeroMQ bridge)
-#define USE_SERVOS    1
+#define USE_SERVOS    1   // positional servos (camera/laser scanner)
+#define USE_DRIVE     1   // 4 continuous-rotation servo wheels (skid steer)
 #define USE_DISPLAY   0
 #define USE_AUDIO     0
 #define USE_DISTANCE  0   // VL53L1X
@@ -15,12 +16,29 @@
 // =====================================================
 //  SERVOS  (power them from the buck converter, NOT the ESP32 5V pin)
 // =====================================================
-#define NUM_SERVOS 4
-enum ServoId { SERVO_PAN = 0, SERVO_TILT, SERVO_LEFT_ARM, SERVO_RIGHT_ARM };
-static const int SERVO_PINS[NUM_SERVOS]   = { 1,  2, 42, 41 };
-static const int SERVO_MIN[NUM_SERVOS]    = { 20, 60, 10, 10 };   // software limits (deg)
-static const int SERVO_MAX[NUM_SERVOS]    = {160,120,170,170};
-static const int SERVO_CENTER[NUM_SERVOS] = { 90, 90, 90, 90 };
+#define NUM_SERVOS 1
+enum ServoId { SERVO_SCANNER = 0 };
+static const int SERVO_PINS[NUM_SERVOS]   = { 40 };
+static const int SERVO_MIN[NUM_SERVOS]    = { 0 };     // software limits (deg)
+static const int SERVO_MAX[NUM_SERVOS]    = { 180 };
+static const int SERVO_CENTER[NUM_SERVOS] = { 90 };
+
+// =====================================================
+//  DRIVE: 4 SG90 servos modified for continuous rotation (skid steer)
+//  Pulse 1500 us = stop, shorter = one way, longer = the other way.
+//  Power from the buck converter, NOT the ESP32 pin. Keep all grounds joined.
+// =====================================================
+#define NUM_WHEELS 4
+enum WheelId { WHEEL_FL = 0, WHEEL_RL, WHEEL_FR, WHEEL_RR };   // front/rear, left/right
+static const int  WHEEL_PINS[NUM_WHEELS]   = { 1, 2, 42, 41 };
+static const bool WHEEL_LEFT[NUM_WHEELS]   = { true, true, false, false };
+// Mirrored servos need opposite pulses to roll the same way. Fix with "drive/raw" test, then edit here.
+static const bool WHEEL_INVERT[NUM_WHEELS] = { false, false, true, true };
+static int WHEEL_STOP_US[NUM_WHEELS]       = { 1500, 1500, 1500, 1500 };   // trim if a wheel creeps at stop
+#define DRIVE_RANGE_US    400     // full speed = stop +/- this many microseconds
+#define DRIVE_MAX_SCALE   0.5f    // start slow (0.0-1.0), raise once it works
+#define DRIVE_TIMEOUT_MS  500     // stop if no drive/cmd arrives for this long
+#define DRIVE_RAMP_PER_S  3.0f    // max speed change per second (1.0 = full), avoids current spikes
 
 // =====================================================
 //  TFT 2.8" ILI9341 (SPI)   LED/BL pin -> 3.3V
@@ -61,12 +79,13 @@ static const char* const OUTBOUND_TOPICS[] = { "distance", "audio/loud" };
 //  micro-ZMQ (WiFi link to the agent -> your ZeroMQ network)
 // =====================================================
 #define USE_ZMQ 1
-#define WIFI_SSID       "your_wifi_name"
-#define WIFI_PASS       "your_wifi_password"
-#define ZMQ_AGENT_HOST  "192.168.1.50"     // PC (or cloud server) running agent.py
+#if __has_include("secrets.h")
+#include "secrets.h"
+#else
+#error "Copy secrets.example.h to secrets.h and fill in your values"
+#endif
 #define ZMQ_AGENT_PORT  7400
 #define ZMQ_NODE_NAME   "robot-body"
-#define ZMQ_TOKEN       "change-me"        // must match agent --token
 // bus topics that are forwarded to ZeroMQ as "robot/out/<topic>"
 static const char* const ZMQ_OUTBOUND_TOPICS[] = { "distance", "audio/loud", "audio/level", "emotion" };
 #define ZMQ_OUTBOUND_COUNT (sizeof(ZMQ_OUTBOUND_TOPICS) / sizeof(ZMQ_OUTBOUND_TOPICS[0]))
