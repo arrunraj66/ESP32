@@ -5,6 +5,7 @@ import zmq, zmq.asyncio
 
 T_HELLO, T_SUB, T_PUB, T_PING, T_PONG, T_ACK = 1, 2, 3, 4, 5, 6
 MAX_FRAME = 8192
+MAX_OUT_FRAME = 1000   # ESP32 accepts at most 1024; larger frames would disconnect it
 log = logging.getLogger("agent")
 
 
@@ -46,7 +47,7 @@ async def handle_client(reader, writer, args, ctx):
                 if len(parts) != 2:
                     continue
                 topic, payload = parts
-                if len(topic) > 255 or len(topic) + len(payload) + 2 > MAX_FRAME:
+                if len(topic) > 255 or len(topic) + len(payload) + 2 > MAX_OUT_FRAME:
                     continue
                 send_frame(writer, T_PUB, bytes([len(topic)]) + topic + payload)
                 await writer.drain()

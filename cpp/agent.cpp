@@ -30,6 +30,7 @@ namespace {
 
 enum : uint8_t { T_HELLO = 1, T_SUB = 2, T_PUB = 3, T_PING = 4, T_PONG = 5, T_ACK = 6 };
 constexpr size_t MAX_FRAME = 8192;
+constexpr size_t MAX_OUT_FRAME = 1000;   // ESP32 accepts at most 1024; larger frames would disconnect it
 
 struct Args {
   std::string listen = "0.0.0.0";
@@ -183,7 +184,7 @@ void handleClient(int fd, std::string peer, void* ctx, Args a) {
           more = zmq_msg_more(&m2);
           zmq_msg_close(&m2);
         }
-        if (extra != 1 || topic.size() > 255 || topic.size() + payload.size() + 2 > MAX_FRAME) continue;
+        if (extra != 1 || topic.size() > 255 || topic.size() + payload.size() + 2 > MAX_OUT_FRAME) continue;
 
         std::vector<uint8_t> body;
         body.push_back((uint8_t)topic.size());

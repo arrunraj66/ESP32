@@ -7,20 +7,20 @@
 // =====================================================
 #define USE_COMMS     1   // serial command/status link (later: WiFi / ZeroMQ bridge)
 #define USE_SERVOS    1
-#define USE_DISPLAY   1
-#define USE_AUDIO     1
-#define USE_DISTANCE  1   // VL53L1X
-#define USE_BEHAVIOR  1   // idle look-around + reactions
+#define USE_DISPLAY   0
+#define USE_AUDIO     0
+#define USE_DISTANCE  0   // VL53L1X
+#define USE_BEHAVIOR  0   // idle look-around + reactions
 
 // =====================================================
 //  SERVOS  (power them from the buck converter, NOT the ESP32 5V pin)
 // =====================================================
-#define NUM_SERVOS 5
-enum ServoId { SERVO_PAN = 0, SERVO_TILT, SERVO_LEFT_ARM, SERVO_RIGHT_ARM, SERVO_BASE };
-static const int SERVO_PINS[NUM_SERVOS]   = { 1,  2, 42, 41, 40 };
-static const int SERVO_MIN[NUM_SERVOS]    = { 20, 60, 10, 10,  0 };   // software limits (deg)
-static const int SERVO_MAX[NUM_SERVOS]    = {160,120,170,170,180};
-static const int SERVO_CENTER[NUM_SERVOS] = { 90, 90, 90, 90, 90 };
+#define NUM_SERVOS 4
+enum ServoId { SERVO_PAN = 0, SERVO_TILT, SERVO_LEFT_ARM, SERVO_RIGHT_ARM };
+static const int SERVO_PINS[NUM_SERVOS]   = { 1,  2, 42, 41 };
+static const int SERVO_MIN[NUM_SERVOS]    = { 20, 60, 10, 10 };   // software limits (deg)
+static const int SERVO_MAX[NUM_SERVOS]    = {160,120,170,170};
+static const int SERVO_CENTER[NUM_SERVOS] = { 90, 90, 90, 90 };
 
 // =====================================================
 //  TFT 2.8" ILI9341 (SPI)   LED/BL pin -> 3.3V

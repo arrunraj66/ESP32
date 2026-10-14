@@ -1,0 +1,18 @@
+[Unit]
+Description=micro-ZMQ web remote (phone page -> ZeroMQ)
+After=network.target microzmq-broker.service
+Wants=microzmq-broker.service
+
+[Service]
+User=microzmq
+EnvironmentFile=/etc/microzmq.env
+ExecStart=/usr/bin/python3 /opt/microzmq/web_control.py --port 8080
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
